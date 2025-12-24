@@ -1,25 +1,41 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Plus, CheckCircle, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+
+/* ================= TYPES ================= */
 
 interface Event {
   event_id: number
@@ -31,12 +47,32 @@ interface Event {
   status: string
 }
 
+interface Student {
+  student_id: number
+  student_code: string
+  full_name: string
+}
+
+interface Participant {
+  student_id: number
+  student_name: string
+  participation_status: string
+}
+
+/* ================= COMPONENT ================= */
+
 export function EventsManagement() {
+  const { toast } = useToast()
+
   const [events, setEvents] = useState<Event[]>([])
   const [clubs, setClubs] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const { toast } = useToast()
+  const [students, setStudents] = useState<Student[]>([])
+  const [participants, setParticipants] = useState<Participant[]>([])
+
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedStudentId, setSelectedStudentId] = useState("")
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [isParticipantsOpen, setIsParticipantsOpen] = useState(false)
 
   const [formData, setFormData] = useState({
     club_id: "",
@@ -45,254 +81,270 @@ export function EventsManagement() {
     location: "",
   })
 
+  /* ================= FETCH BASE DATA ================= */
+
   useEffect(() => {
     fetchEvents()
     fetchClubs()
+    fetchStudents()
   }, [])
 
   const fetchEvents = async () => {
-    try {
-      const response = await fetch("/api/events")
-      if (!response.ok) throw new Error("Failed to fetch events")
-      const data = await response.json()
-      setEvents(data)
-    } catch (error) {
-      console.error("[v0] Error fetching events:", error)
-      toast({ title: "Error", description: "Failed to load events", variant: "destructive" })
-    } finally {
-      setIsLoading(false)
-    }
+    const res = await fetch("/api/events")
+    setEvents(await res.json())
   }
 
   const fetchClubs = async () => {
-    try {
-      const response = await fetch("/api/clubs")
-      if (!response.ok) throw new Error("Failed to fetch clubs")
-      const data = await response.json()
-      setClubs(data)
-    } catch (error) {
-      console.error("[v0] Error fetching clubs:", error)
-    }
+    const res = await fetch("/api/clubs")
+    setClubs(await res.json())
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const fetchStudents = async () => {
+    const res = await fetch("/api/students")
+    setStudents(await res.json())
+  }
+
+  const fetchParticipants = async (eventId: number) => {
+    const res = await fetch(`/api/event-participants?event_id=${eventId}`)
+    setParticipants(await res.json())
+  }
+
+  /* ================= EVENT CRUD ================= */
+
+  const createEvent = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.club_id || !formData.event_name || !formData.event_date || !formData.location) {
+    const res = await fetch("/api/create_event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    })
+
+    const data = await res.json()
+    if (!data.success) {
+      toast({ title: "Error", description: data.error, variant: "destructive" })
+      return
+    }
+
+    toast({ title: "Event created successfully" })
+    setIsCreateOpen(false)
+    setFormData({ club_id: "", event_name: "", event_date: "", location: "" })
+    fetchEvents()
+  }
+
+  const updateStatus = async (eventId: number, status: string) => {
+    await fetch("/api/approve_event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: eventId, status }),
+    })
+    toast({ title: `Event ${status.toLowerCase()}` })
+    fetchEvents()
+  }
+
+  /* ================= PARTICIPANTS ================= */
+
+  const addParticipant = async () => {
+    if (!selectedEvent || !selectedStudentId) return
+
+    const res = await fetch("/api/event-participants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_id: selectedEvent.event_id,
+        student_id: selectedStudentId,
+      }),
+    })
+
+    const data = await res.json()
+    if (!data.success) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields",
+        title: "Error",
+        description: data.error,
         variant: "destructive",
       })
       return
     }
 
-    try {
-      console.log("[v0] Submitting event data:", formData)
-
-      const response = await fetch("/api/create_event", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-      console.log("[v0] Create event response:", data)
-
-      if (!response.ok && !data.success) {
-        throw new Error(data.error || "Failed to create event")
-      }
-
-      toast({ title: "Success", description: "Event created successfully" })
-      setIsDialogOpen(false)
-      resetForm()
-      fetchEvents()
-    } catch (error) {
-      console.error("[v0] Error creating event:", error)
-      toast({ title: "Error", description: "Failed to create event", variant: "destructive" })
-    }
+    toast({ title: "Student registered" })
+    setSelectedStudentId("")
+    fetchParticipants(selectedEvent.event_id)
   }
 
-  const handleApprove = async (eventId: number, status: string) => {
-    try {
-      const response = await fetch("/api/approve_event", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id: eventId, status }),
-      })
-
-      if (!response.ok) throw new Error("Failed to update event status")
-
-      toast({ title: "Success", description: `Event ${status.toLowerCase()} successfully` })
-      fetchEvents()
-    } catch (error) {
-      console.error("[v0] Error updating event status:", error)
-      toast({ title: "Error", description: "Failed to update event status", variant: "destructive" })
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      club_id: "",
-      event_name: "",
-      event_date: "",
-      location: "",
-    })
-  }
+  /* ================= UI ================= */
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      <div className="flex justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Events Management</h2>
-          <p className="text-muted-foreground mt-1">Create and approve club events</p>
+          <h2 className="text-3xl font-bold">Events Management</h2>
+          <p className="text-muted-foreground">Create, approve & manage events</p>
         </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open)
-            if (!open) resetForm()
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Event
-            </Button>
-          </DialogTrigger>
+
+        {/* CREATE EVENT */}
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" /> Create Event
+          </Button>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Event</DialogTitle>
-              <DialogDescription>Add a new event for a club</DialogDescription>
+              <DialogTitle>Create Event</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="club_id">Club</Label>
-                  <Select
-                    value={formData.club_id}
-                    onValueChange={(value) => setFormData({ ...formData, club_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a club" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clubs.map((club) => (
-                        <SelectItem key={club.club_id} value={club.club_id.toString()}>
-                          {club.club_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_name">Event Name</Label>
-                  <Input
-                    id="event_name"
-                    value={formData.event_name}
-                    onChange={(e) => setFormData({ ...formData, event_name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event_date">Event Date</Label>
-                  <Input
-                    id="event_date"
-                    type="date"
-                    value={formData.event_date}
-                    onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsDialogOpen(false)
-                    resetForm()
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Create Event</Button>
-              </DialogFooter>
+            <form onSubmit={createEvent} className="space-y-3">
+              <Select
+                value={formData.club_id}
+                onValueChange={(v) => setFormData({ ...formData, club_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select club" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clubs.map((c) => (
+                    <SelectItem key={c.club_id} value={c.club_id.toString()}>
+                      {c.club_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Event name"
+                value={formData.event_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, event_name: e.target.value })
+                }
+              />
+
+              <Input
+                type="date"
+                value={formData.event_date}
+                onChange={(e) =>
+                  setFormData({ ...formData, event_date: e.target.value })
+                }
+              />
+
+              <Input
+                placeholder="Location"
+                value={formData.location}
+                onChange={(e) =>
+                  setFormData({ ...formData, location: e.target.value })
+                }
+              />
+
+              <Button type="submit">Create</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* EVENTS TABLE */}
       <Card>
         <CardHeader>
-          <CardTitle>All Events</CardTitle>
-          <CardDescription>View and approve club events</CardDescription>
+          <CardTitle>Events</CardTitle>
+          <CardDescription>Approve & manage participants</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading events...</div>
-          ) : events.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">No events found</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Event Name</TableHead>
-                  <TableHead>Club</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>Club</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((e) => (
+                <TableRow key={e.event_id}>
+                  <TableCell>{e.event_name}</TableCell>
+                  <TableCell>{e.club_name}</TableCell>
+                  <TableCell>{e.event_date}</TableCell>
+                  <TableCell>{e.status}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    {e.status === "Pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => updateStatus(e.event_id, "Approved")}
+                        >
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => updateStatus(e.event_id, "Rejected")}
+                        >
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedEvent(e)
+                        fetchParticipants(e.event_id)
+                        setIsParticipantsOpen(true)
+                      }}
+                    >
+                      Participants
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.event_id}>
-                    <TableCell className="font-medium">{event.event_name}</TableCell>
-                    <TableCell>{event.club_name}</TableCell>
-                    <TableCell>{event.event_date}</TableCell>
-                    <TableCell>{event.location}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          event.status === "Approved"
-                            ? "bg-green-100 text-green-800"
-                            : event.status === "Rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {event.status || "Pending"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {(!event.status || event.status === "Pending") && (
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleApprove(event.event_id, "Approved")}>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleApprove(event.event_id, "Rejected")}>
-                            <XCircle className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
+
+      {/* PARTICIPANTS MODAL */}
+      <Dialog open={isParticipantsOpen} onOpenChange={setIsParticipantsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Participants — {selectedEvent?.event_name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex gap-2 mb-4">
+            <Select
+              value={selectedStudentId}
+              onValueChange={setSelectedStudentId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select student" />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((s) => (
+                  <SelectItem
+                    key={s.student_id}
+                    value={s.student_id.toString()}
+                  >
+                    {s.full_name} ({s.student_code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={addParticipant}>Add</Button>
+          </div>
+
+          {participants.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No participants</p>
+          ) : (
+            participants.map((p) => (
+              <div
+                key={p.student_id}
+                className="flex justify-between border-b pb-2"
+              >
+                <span>{p.student_name}</span>
+                <span className="text-xs">{p.participation_status}</span>
+              </div>
+            ))
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

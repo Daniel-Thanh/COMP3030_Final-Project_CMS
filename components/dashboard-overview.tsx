@@ -4,6 +4,10 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, CalendarCheck, DollarSign, TrendingUp } from "lucide-react"
 
+/* =======================
+   Types
+======================= */
+
 type DashboardStats = {
   totalClubs: number
   pendingEvents: number
@@ -12,10 +16,14 @@ type DashboardStats = {
 }
 
 type Activity = {
-  club_name: string
-  action: string
-  activity_date: string
+  club_name: string | null
+  activity_text: string
+  action_time: string
 }
+
+/* =======================
+   Component
+======================= */
 
 export function DashboardOverview() {
   const [stats, setStats] = useState<DashboardStats>({
@@ -29,7 +37,9 @@ export function DashboardOverview() {
   const [loadingStats, setLoadingStats] = useState(true)
   const [loadingActivity, setLoadingActivity] = useState(true)
 
-  // Fetch dashboard stats
+  /* =======================
+     Fetch dashboard stats
+  ======================= */
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -47,7 +57,10 @@ export function DashboardOverview() {
     fetchStats()
   }, [])
 
-  // Fetch recent activity
+  /* =======================
+     Fetch recent activity
+     (AUDIT LOG)
+  ======================= */
   useEffect(() => {
     const fetchActivity = async () => {
       try {
@@ -65,6 +78,9 @@ export function DashboardOverview() {
     fetchActivity()
   }, [])
 
+  /* =======================
+     Stat cards
+  ======================= */
   const statCards = [
     {
       title: "Total Clubs",
@@ -92,6 +108,9 @@ export function DashboardOverview() {
     },
   ]
 
+  /* =======================
+     Render
+  ======================= */
   return (
     <div>
       {/* Header */}
@@ -131,14 +150,16 @@ export function DashboardOverview() {
 
       {/* Lower section */}
       <div className="grid gap-4 md:grid-cols-2 mt-6">
-        {/* Recent Activity */}
+        {/* Recent Activity (AUDIT LOG) */}
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             {loadingActivity ? (
-              <p className="text-sm text-muted-foreground">Loading activity...</p>
+              <p className="text-sm text-muted-foreground">
+                Loading activity...
+              </p>
             ) : activities.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No recent activity
@@ -148,18 +169,18 @@ export function DashboardOverview() {
                 {activities.map((activity, i) => (
                   <div
                     key={i}
-                    className="flex items-start justify-between border-b border-border pb-3 last:border-0 last:pb-0"
+                    className="flex items-start justify-between border-b border-border pb-3 last:border-0"
                   >
                     <div>
                       <p className="font-medium text-sm">
-                        {activity.club_name}
+                        {activity.club_name ?? "System"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.action}
+                        {activity.activity_text}
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {activity.activity_date}
+                      {new Date(activity.action_time).toLocaleDateString()}
                     </span>
                   </div>
                 ))}
@@ -168,7 +189,7 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
 
-        {/* Quick Stats (still derived / simple) */}
+        {/* Quick Stats */}
         <Card>
           <CardHeader>
             <CardTitle>Quick Stats</CardTitle>
