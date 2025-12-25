@@ -4,22 +4,46 @@ header("Content-Type: application/json");
 
 $type = $_GET["type"] ?? "";
 
-if ($type === "memberships") {
-    $stmt = $pdo->query("SELECT * FROM v_monthly_membership_stats");
-}
-elseif ($type === "club-summary") {
-    $stmt = $pdo->query("CALL sp_club_summary()");
-}
-elseif ($type === "expenses") {
-    $stmt = $pdo->query("CALL sp_monthly_expenses()");
-}
-elseif ($type === "activity-log") {
-    $stmt = $pdo->query("SELECT * FROM audit_log ORDER BY action_time DESC");
-}
-else {
-    http_response_code(400);
-    echo json_encode(["error" => "Invalid report type"]);
-    exit;
-}
+try {
 
-echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+  if ($type === "memberships") {
+    $stmt = $pdo->query("SELECT * FROM v_monthly_membership_stats");
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+  }
+
+  if ($type === "club-summary") {
+    $stmt = $pdo->prepare("CALL sp_club_summary()");
+    $stmt->execute();
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
+    echo json_encode($data);
+    exit;
+  }
+
+  if ($type === "expenses") {
+    $stmt = $pdo->prepare("CALL sp_monthly_expenses()");
+    $stmt->execute();
+    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
+    echo json_encode($data);
+    exit;
+  }
+
+  if ($type === "activity-log") {
+    $stmt = $pdo->query("
+      SELECT * FROM v_recent_activity
+      ORDER BY action_time DESC
+      LIMIT 20
+    ");
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+  }
+
+  http_response_code(400);
+  echo json_encode(["error" => "Invalid report type"]);
+
+} catch (Exception $e) {
+  http_response_code(500);
+  echo json_encode(["error" => $e->getMessage()]);
+}
