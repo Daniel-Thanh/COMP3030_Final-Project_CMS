@@ -1,5 +1,6 @@
-DELIMITER $$
+use clubs_management;
 
+DELIMITER $$
 CREATE TRIGGER trg_clubs_insert
 AFTER INSERT ON clubs
 FOR EACH ROW
@@ -30,6 +31,42 @@ FOR EACH ROW
 BEGIN
   INSERT INTO audit_log (user_id, action, table_name, record_id, action_time)
   VALUES (NULL, 'DELETE', 'clubs', OLD.club_id, NOW());
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_event_participants_insert
+AFTER INSERT ON event_participants
+FOR EACH ROW
+BEGIN
+  INSERT INTO audit_log (user_id, action, table_name, record_id, action_time)
+  VALUES (NULL, 'INSERT', 'event_participants', NEW.event_id, NOW());
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_event_participants_update
+AFTER UPDATE ON event_participants
+FOR EACH ROW
+BEGIN
+  INSERT INTO audit_log (user_id, action, table_name, record_id, action_time)
+  VALUES (NULL, 'UPDATE', 'event_participants', NEW.event_id, NOW());
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_event_participants_delete
+AFTER DELETE ON event_participants
+FOR EACH ROW
+BEGIN
+  INSERT INTO audit_log (user_id, action, table_name, record_id, action_time)
+  VALUES (NULL, 'DELETE', 'event_participants', OLD.event_id, NOW());
 END$$
 
 DELIMITER ;
@@ -130,6 +167,7 @@ END$$
 
 DELIMITER ;
 
+
 DELIMITER $$
 
 CREATE TRIGGER trg_advisors_insert
@@ -201,6 +239,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
-
-
