@@ -52,7 +52,7 @@ C:\xampp\htdocs\sam-club\
 6. Click "Go" button
 7. You should see "clubs_management" database appear on the left sidebar
 
-### Step 4: In case the phpadmin gets crashed (which I already experienced during the project), you can connect xampp to sqlworkbench
+### Step 4: In case the phpadmin gets crashed (which we already experienced during the project), you can connect xampp to sqlworkbench
 1. Change this file: xampp/htdocs/sam-club/config/db.php 
 and change those lines: 
 $host = "localhost";
@@ -60,6 +60,7 @@ $db   = "clubs_management";
 $user = "root";
 $pass = "";
 to fit your sqlworkbench set up. Normally you just need to add password because many users' root is already root.
+If you are not using sqlworkbench, you can connect to phpAdmin, then you do not need to add password.
 
 
 ### Step 5: Verify Backend
