@@ -21,21 +21,7 @@
 
 Your structure should look like:
 
-C:\xampp\htdocs\sam-club\
-├── config\
-│   └── db.php
-└── api\
-    ├── clubs.php
-    ├── advisors.php
-    ├── students.php
-    ├── events.php
-    ├── create_event.php
-    ├── approve_event.php
-    ├── memberships.php
-    ├── club_advisors.php
-    ├── budgets.php
-    └── expenses.php
-```
+<img width="295" height="384" alt="image" src="https://github.com/user-attachments/assets/0d4791c1-c995-4fe2-848c-e3f25b30196d" />
 
 ### Step 3: Start XAMPP Services
 1. Open XAMPP Control Panel
@@ -47,20 +33,26 @@ C:\xampp\htdocs\sam-club\
 1. Open browser and go to `http://localhost/phpmyadmin`
 2. Click "SQL" tab at the top
 3. Open the file `database/sample_data.sql` from the downloaded frontend
-4. Copy ALL the content
+4. Copy ALL sql ddl script, including schemas, stored procedures, views, triggers
 5. Paste into the SQL tab in phpMyAdmin
 6. Click "Go" button
 7. You should see "clubs_management" database appear on the left sidebar
 
-### Step 4: In case the phpadmin gets crashed (which we already experienced during the project), you can connect xampp to sqlworkbench
+In case the phpadmin gets crashed (which we already experienced during the project), you can connect xampp to sqlworkbench
 1. Change this file: xampp/htdocs/sam-club/config/db.php 
-and change those lines: 
+and change those lines: \
+```
 $host = "localhost";
 $db   = "clubs_management";
 $user = "root";
 $pass = "";
-to fit your sqlworkbench set up. Normally you just need to add password because many users' root is already root.
-If you are not using sqlworkbench, you can connect to phpAdmin, then you do not need to add password.
+```
+
+to fit your sqlworkbench set up.
+
+Alert:
+- If using phpMyAdmin → keep $pass empty
+- If using MySQL Workbench → set $pass to your MySQL password (recommended)
 
 
 ### Step 5: Verify Backend
@@ -145,6 +137,7 @@ If you are not using sqlworkbench, you can connect to phpAdmin, then you do not 
 3. **Create an event**: Go to Events tab → Click "Add Event" → Fill form → Save
 4. **Approve event**: Find the pending event → Click "Approve"
 5. **Add membership**: Go to Memberships → "Add Membership" → Select club and student
+6. **Check recent activity status**: Go to dashboard
 
 ## Troubleshooting
 
